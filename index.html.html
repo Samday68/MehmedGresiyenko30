@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WITH RESPECT TO MEHMED GRESIYENKO 2025</title>
+  <style>
+    body { font-family: sans-serif; background:#fff; color:#000; display:flex; flex-direction:column; align-items:center; padding:10px; margin:0; }
+    h2 { text-align:center; font-size:18px; margin:8px 0; }
+
+    #graphToggle { height:28px; font-size:13px; font-weight:bold; padding:0 14px; cursor:pointer; }
+    #xzRow { display:flex; align-items:center; justify-content:center; gap:6px; margin:5px 0; }
+    .flag { width:80px; height:80px; display:flex; align-items:center; justify-content:center; font-size:64px; line-height:1; }
+
+    #pairs { display:flex; flex-wrap:nowrap; overflow-x:auto; margin:8px 0; width:100%; max-width:420px; }
+    .pair-btn { padding:8px 12px; margin:4px; border:none; border-radius:6px; background:#eee; cursor:pointer; font-size:14px; flex:0 0 auto; }
+    .pair-btn.active { background:#333; color:#fff; }
+
+    #topbar { width:100%; max-width:420px; display:flex; justify-content:space-between; gap:6px; align-items:center; }
+    #time, #price { font-size:12px; font-weight:bold; padding:4px 8px; border-radius:4px; min-width:80px; text-align:center; }
+    #time { background:#000; color:#fff; margin-right:auto; }
+    #price { background:#999; color:#fff; margin-left:auto; }
+
+    /* Trend kutusu (fiyatın yanında) */
+    #trendBox {
+      font-size:11px;
+      font-weight:bold;
+      padding:3px 8px;
+      border-radius:4px;
+      border:1px solid #000;
+      margin-left:4px;
+      min-width:68px;
+      text-align:center;
+      box-sizing:border-box;
+    }
+
+    #xzRowWrap { width:100%; max-width:420px; position:relative; margin-top:1px; }
+    #numbersTop { display:flex; flex-wrap:nowrap; justify-content:flex-end; overflow-x:hidden; width:100%; position:relative; padding:4px 0; }
+    .num-box { flex:0 0 22px; height:22px; display:flex; justify-content:center; align-items:center; margin:1px; color:#fff; font-size:12px; border-radius:4px; }
+    .worm-line { position:absolute; height:3px; border-top:3px solid; z-index:5; }
+
+    #analysisBoxes { width:100%; max-width:420px; border-top:2px solid #000; margin-top:2px; position:relative; }
+    .row { position:relative; display:flex; align-items:center; justify-content:flex-start; height:30px; border-bottom:2px solid #000; font-size:11px; font-weight:700; padding-left:6px; }
+    .normalBlue   { color:#0b57d0; }
+    .abnormalBlue { color:#0b57d0; background:#cce0ff; }
+    .abnormalRed  { color:#d93025; background:#ffd6d6; }
+    .normalRed    { color:#d93025; }
+
+    #verticalLine { position:absolute; top:0; bottom:0; width:1.25px; background:#000; }
+
+    .calc-box  { position:absolute; width:22px; height:22px; border-radius:4px; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; top:2px; }
+    .calc-worm { position:absolute; height:3px; border-top:3px solid; z-index:4; }
+  </style>
+</head>
+<body>
+  <h2>WITH RESPECT TO MEHMED GRESIYENKO 2025</h2>
+
+  <div id="xzRow">
+    <span class="flag">🇹🇷</span>
+    <span class="flag">🇵🇸</span>
+    <button id="graphToggle" onclick="toggleGraph()">XZ</button>
+    <span class="flag">🇮🇩</span>
+    <span class="flag">🇵🇸</span>
+  </div>
+
+  <div id="pairs">
+    <button class="pair-btn active" onclick="selectPair(this, 'R_100')">Volatility 100</button>
+    <button class="pair-btn" onclick="selectPair(this, 'R_75')">Volatility 75</button>
+    <button class="pair-btn" onclick="selectPair(this, 'R_50')">Volatility 50</button>
+    <button class="pair-btn" onclick="selectPair(this, 'R_25')">Volatility 25</button>
+    <button class="pair-btn" onclick="selectPair(this, 'R_10')">Volatility 10</button>
+  </div>
+
+  <div id="topbar">
+    <div id="time">GMT 00:00:00</div>
+
+    <div style="display:flex; align-items:center; gap:4px; margin-left:auto;">
+      <div id="price">0,00</div>
+      <div id="trendBox">---</div>
+    </div>
+  </div>
+
+  <div id="chartContainer" style="position:relative; width:100%; max-width:400px;">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div id="xzRowWrap">
+    <div id="numbersTop"></div>
+  </div>
+
+  <div id="analysisBoxes">
+    <div class="row normalBlue"   id="rowNB"></div>
+    <div class="row abnormalBlue" id="rowAB"></div>
+    <div class="row abnormalRed"  id="rowAR"></div>
+    <div class="row normalRed"    id="rowNR"></div>
+    <div id="verticalLine"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let ws;
+    let prices=[], digits=[], decimalDigits=[], combinedDigits=[];
+    let wormLinesTop=[];
+    let numColors=[];
+    let currentPair='R_100', currentGraph='XZ';
+
+    // ZZ + destek/direnç + trend + RISE/FALL sinyal değişkenleri
+    let zzRanges = [];          // ZZ vektör farkları (son iki hane farkı, 0–10)
+    let lastResistance = null;  // 20 fiyat gövdenin max'ı
+    let lastSupport = null;     // 20 fiyat gövdenin min'i
+    let lastBreakDir = null;    // 'UP' / 'DOWN' / null
+    let resistanceLevels = [];  // ana + son lokal tepe
+    let supportLevels = [];     // ana + son lokal dip
+    let currentTrend = 'NONE';  // 'UP', 'DOWN', 'SIDEWAYS', 'NONE'
+
+    // RISE/FALL sinyali (2 saniye görünür)
+    let lastSignal = null;          // 'RISE' veya 'FALL'
+    let lastSignalTime = 0;
+    const SIGNAL_LIFETIME = 2000;   // 2 saniye
+
+    function setSignal(type){
+      lastSignal = type;      // 'RISE' / 'FALL'
+      lastSignalTime = Date.now();
+    }
+
+    function toggleGraph(){
+      if(currentGraph==='XZ') currentGraph='ZZ';
+      else if(currentGraph==='ZZ') currentGraph='Z.Z';
+      else currentGraph='XZ';
+      document.getElementById('graphToggle').innerText=currentGraph;
+      chart.update();
+      renderCalcBubbles();
+    }
+
+    const ctx=document.getElementById('chart').getContext('2d');
+    const chart=new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:Array.from({length:11},(_,i)=>(i+1).toString()),
+        datasets:[{
+          data:Array(11).fill(null),
+          borderColor:'black',
+          borderWidth:1.5,
+          backgroundColor:'rgba(0,0,0,0.05)',
+          pointBackgroundColor:Array(11).fill('black'),
+          pointRadius:2,
+          pointHoverRadius:3
+        }]
+      },
+      options:{
+        plugins:{legend:{display:false},tooltip:{enabled:false}},
+        scales:{y:{beginAtZero:false}},
+        animation:false
+      },
+      plugins:[{
+        afterDatasetsDraw(chart){
+          const {ctx}=chart;
+          const meta=chart.getDatasetMeta(0);
+
+          ctx.font='900 14px sans-serif';
+          ctx.textAlign='center';
+          ctx.textBaseline='bottom';
+
+          const decs=decimalDigits.slice(-11);
+          const digs=digits.slice(-11);
+          const combs=combinedDigits.slice(-11);
+          const colors=numColors.slice(-11);
+          const worms=wormLinesTop.slice(-11);
+
+          meta.data.forEach((pt,i)=>{
+            let t='';
+            if(currentGraph==='XZ') t=decs[i]||'';
+            else if(currentGraph==='ZZ') t=digs[i]||'';
+            else t=(combs[i]||'').replace(',', '.');
+
+            if(pt && pt.x!==undefined){
+              ctx.fillStyle = (colors[i]||'#000');
+              ctx.fillText(t, pt.x, pt.y - 2);
+
+              const wormColor = worms[i];
+              if(wormColor==='blue' || wormColor==='red'){
+                ctx.strokeStyle = wormColor;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(pt.x - 5, pt.y - 2);
+                ctx.lineTo(pt.x + 5, pt.y - 2);
+                ctx.stroke();
+              }
+            }
+          });
+
+          const last = meta.data[meta.data.length-1];
+          if(last && last.x!==undefined){
+            ctx.strokeStyle='black';
+            ctx.lineWidth=1.5;
+            ctx.beginPath();
+            ctx.moveTo(chart.scales.x.left, last.y);
+            ctx.lineTo(last.x, last.y);
+            ctx.stroke();
+          }
+
+          const yScale = chart.scales.y;
+          const xScale = chart.scales.x;
+
+          // === DESTEK / DİRENÇ ÇİZGİLERİ ===
+          if(yScale && xScale){
+            ctx.save();
+
+            // ---- ANA 20 FİYATLIK DESTEK / DİRENÇ (DÜZ, KALIN, KESİKSİZ) ----
+            ctx.setLineDash([]);      // düz çizgi
+            ctx.lineWidth = 2;        // kalınlık
+
+            // ana direnç (mavi)
+            if(lastResistance !== null){
+              const yR = yScale.getPixelForValue(lastResistance);
+              if(yR >= yScale.top && yR <= yScale.bottom){
+                ctx.strokeStyle = 'blue';
+                ctx.beginPath();
+                ctx.moveTo(xScale.left,  yR);
+                ctx.lineTo(xScale.right, yR);
+                ctx.stroke();
+              }
+            }
+
+            // ana destek (kırmızı)
+            if(lastSupport !== null){
+              const yS = yScale.getPixelForValue(lastSupport);
+              if(yS >= yScale.top && yS <= yScale.bottom){
+                ctx.strokeStyle = 'red';
+                ctx.beginPath();
+                ctx.moveTo(xScale.left,  yS);
+                ctx.lineTo(xScale.right, yS);
+                ctx.stroke();
+              }
+            }
+
+            // ---- ARA TEPE / DİP ÇİZGİLERİ (KALIN AMA KESİK KESİK) ----
+            ctx.setLineDash([4,3]);   // kesik çizgi
+            ctx.lineWidth = 2;        // ana çizgi ile aynı kalınlık
+
+            resistanceLevels.forEach(level=>{
+              if(level === lastResistance) return; // ana çizgi zaten çizildi
+              const yR = yScale.getPixelForValue(level);
+              if(yR >= yScale.top && yR <= yScale.bottom){
+                ctx.strokeStyle = 'rgba(0,0,255,0.6)';
+                ctx.beginPath();
+                ctx.moveTo(xScale.left,  yR);
+                ctx.lineTo(xScale.right, yR);
+                ctx.stroke();
+              }
+            });
+
+            supportLevels.forEach(level=>{
+              if(level === lastSupport) return;
+              const yS = yScale.getPixelForValue(level);
+              if(yS >= yScale.top && yS <= yScale.bottom){
+                ctx.strokeStyle = 'rgba(255,0,0,0.6)';
+                ctx.beginPath();
+                ctx.moveTo(xScale.left,  yS);
+                ctx.lineTo(xScale.right, yS);
+                ctx.stroke();
+              }
+            });
+
+            ctx.restore();
+          }
+
+          // === Sağ altta RISE / FALL etiketi (2 sn, sadece sinyal varsa) ===
+          if(yScale && xScale){
+            const now = Date.now();
+            if(currentGraph === 'ZZ' && lastSignal && (now - lastSignalTime) <= SIGNAL_LIFETIME){
+              ctx.save();
+              ctx.font = 'bold 12px sans-serif';
+              ctx.textAlign = 'right';
+              ctx.textBaseline = 'bottom';
+
+              const label = lastSignal === 'RISE' ? 'RISE' : 'FALL';
+              const bg    = lastSignal === 'RISE' ? '#0b57d0' : '#d93025';
+              const fg    = '#ffffff';
+
+              const pad = 6;
+              const xRight  = xScale.right - pad;
+              const yBottom = yScale.bottom - pad;
+
+              const metrics = ctx.measureText(label);
+              const w = metrics.width + 16;
+              const h = 20;
+
+              ctx.fillStyle = bg;
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.rect(xRight - w, yBottom - h, w, h);
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.fillStyle = fg;
+              ctx.fillText(label, xRight - 8, yBottom - 5);
+
+              ctx.restore();
+            }
+          }
+
+          // Trend kutusunu güncelle (fiyatın yanındaki kutu)
+          const trendBox = document.getElementById('trendBox');
+          if(trendBox){
+            if(currentTrend === 'UP'){
+              trendBox.textContent = 'UPTREND';
+              trendBox.style.background = '#0b57d0';
+              trendBox.style.color = '#fff';
+            }else if(currentTrend === 'DOWN'){
+              trendBox.textContent = 'DOWNTREND';
+              trendBox.style.background = '#d93025';
+              trendBox.style.color = '#fff';
+            }else if(currentTrend === 'SIDEWAYS'){
+              trendBox.textContent = 'SIDEWAYS';
+              trendBox.style.background = '#ffffff';
+              trendBox.style.color = '#000';
+            }else{
+              trendBox.textContent = '---';
+              trendBox.style.background = '#ffffff';
+              trendBox.style.color = '#000';
+            }
+          }
+        }
+      }]
+    });
+
+    function selectPair(el,pair){
+      currentPair=pair;
+      document.querySelectorAll('.pair-btn').forEach(b=>b.classList.remove('active'));
+      el.classList.add('active');
+      if(ws) ws.close();
+      prices=[];digits=[];decimalDigits=[];combinedDigits=[];
+      wormLinesTop=[];numColors=[];
+      lastResistance = null;
+      lastSupport    = null;
+      lastBreakDir   = null;
+      resistanceLevels=[];
+      supportLevels=[];
+      currentTrend = 'NONE';
+      lastSignal = null;
+      lastSignalTime = 0;
+      document.getElementById('numbersTop').innerHTML='';
+      ['rowNB','rowAB','rowAR','rowNR'].forEach(id=>{
+        document.getElementById(id).innerHTML='';
+      });
+      startWS();
+    }
+
+    // === 20 fiyatlık pencere + SON LOKAL TEPE / DİP (gecikmesiz) ===
+    function updateWorm(){
+      if(prices.length < 20) return;
+
+      const last20 = prices.slice(-20);           // 20 fiyat
+      const body   = last20.slice(0, -1);        // gövde: son fiyat hariç 19
+      const last   = last20[last20.length - 1];  // en son tik
+
+      // Ana max / min
+      const max    = Math.max(...body);
+      const min    = Math.min(...body);
+
+      lastResistance = max;
+      lastSupport    = min;
+
+      // Ara tepe/dipleri HER SEFERİNDE sıfırla → eski çizgiler silinsin
+      resistanceLevels = [];
+      supportLevels    = [];
+
+      let lastLocalRes = null;
+      let lastLocalSup = null;
+      const windowBody = last20;
+
+      for(let i=1; i<windowBody.length-1; i++){
+        const pPrev = windowBody[i-1];
+        const p     = windowBody[i];
+        const pNext = windowBody[i+1];
+
+        if(p >= pPrev && p > pNext){   // lokal tepe
+          lastLocalRes = p;
+        }
+
+        if(p <= pPrev && p < pNext){   // lokal dip
+          lastLocalSup = p;
+        }
+      }
+
+      if(lastLocalRes !== null) resistanceLevels.push(lastLocalRes);
+      if(lastLocalSup !== null) supportLevels.push(lastLocalSup);
+
+      if(!resistanceLevels.includes(max)) resistanceLevels.push(max);
+      if(!supportLevels.includes(min))    supportLevels.push(min);
+
+      let color = 'lightgreen';
+      lastBreakDir = null;
+
+      if(last > max + 0.0001){
+        color = 'blue';
+        lastBreakDir = 'UP';
+      }else if(last < min - 0.0001){
+        color = 'red';
+        lastBreakDir = 'DOWN';
+      }
+
+      wormLinesTop.push(color);
+      if(wormLinesTop.length>20) wormLinesTop.shift();
+    }
+
+    function renderWormLines(containerId,wormArray){
+      const c=document.getElementById(containerId);
+      c.querySelectorAll('.worm-line').forEach(e=>e.remove());
+      const boxes=c.querySelectorAll('.num-box');
+      boxes.forEach((box,idx)=>{
+        if(!wormArray[idx]) return;
+        const line=document.createElement('div');
+        line.className='worm-line';
+        line.style.width=box.offsetWidth+'px';
+        line.style.left=box.offsetLeft+'px';
+        line.style.top=(box.offsetTop+box.offsetHeight+0.2)+'px';
+        line.style.borderTopColor=wormArray[idx];
+        c.appendChild(line);
+      });
+    }
+
+    function placeVerticalLine(){
+      const row=document.getElementById('numbersTop');
+      const vLine=document.getElementById('verticalLine');
+      const boxes=row.querySelectorAll('.num-box');
+      if(boxes.length<7) return;
+      const b6=boxes[boxes.length-6];
+      const b7=boxes[boxes.length-7];
+      const r6=b6.getBoundingClientRect();
+      const r7=b7.getBoundingClientRect();
+      const rA=document.getElementById('analysisBoxes').getBoundingClientRect();
+      const midViewportX = (r7.right + r6.left) / 2;
+      const leftInside = midViewportX - rA.left;
+      vLine.style.left = leftInside + 'px';
+    }
+
+    // === ZZ vektörleri (son iki hane farkı) ===
+    function updateZZRanges(){
+      zzRanges = [];
+      if(prices.length < 2) return;
+
+      const zzDigits = prices.map(p=>{
+        const intPart = Math.floor(p);
+        return intPart % 100;   // 547 -> 47
+      });
+
+      for(let i=0;i<zzDigits.length-1;i++){
+        let a = zzDigits[i];
+        let b = zzDigits[i+1];
+        let diff = Math.abs(b-a);
+        if(diff > 10) diff = 10;
+        zzRanges.push(diff);
+      }
+    }
+
+    // === UPTREND / DOWNTREND / SIDEWAYS tespiti ===
+    function evaluateTrend(){
+      if(prices.length < 6) return;
+
+      const baseIdx = Math.max(1, prices.length - 20);
+
+      const legs = [];
+      let prevDir = 0;
+      let legStart = baseIdx - 1;
+
+      for(let i=baseIdx;i<prices.length;i++){
+        const diff = prices[i] - prices[i-1];
+        let dir = 0;
+        if(diff > 0) dir = 1;
+        else if(diff < 0) dir = -1;
+        if(dir === 0) continue;
+
+        if(prevDir === 0){
+          prevDir = dir;
+          legStart = i-1;
+        } else if(dir !== prevDir){
+          const segmentPrices = prices.slice(legStart, i);
+          legs.push({
+            dir: prevDir,
+            start: legStart,
+            end: i-1,
+            len: (i-1) - legStart,
+            high: Math.max(...segmentPrices),
+            low: Math.min(...segmentPrices)
+          });
+          prevDir = dir;
+          legStart = i-1;
+        }
+
+        if(i === prices.length - 1 && prevDir !== 0){
+          const segmentPrices = prices.slice(legStart, i+1);
+          legs.push({
+            dir: prevDir,
+            start: legStart,
+            end: i,
+            len: i - legStart,
+            high: Math.max(...segmentPrices),
+            low: Math.min(...segmentPrices)
+          });
+        }
+      }
+
+      let newTrend = null;
+
+      if(legs.length >= 3){
+        const L1 = legs[legs.length-3];
+        const L2 = legs[legs.length-2];
+        const L3 = legs[legs.length-1];
+
+        if(L1.dir === 1 && L2.dir === -1 && L3.dir === 1 && L1.len >= 3){
+          const supportPrev = L1.low;
+          if(L2.low > supportPrev && L3.high > L1.high){
+            newTrend = 'UP';
+          }
+        }
+
+        if(L1.dir === -1 && L2.dir === 1 && L3.dir === -1 && L1.len >= 3){
+          const resistancePrev = L1.high;
+          if(L2.high < resistancePrev && L3.low < L1.low){
+            newTrend = 'DOWN';
+          }
+        }
+      }
+
+      if(!newTrend){
+        const maxDiffs = Math.min(8, prices.length-1);
+        const signs = [];
+        for(let i=prices.length-maxDiffs;i<prices.length;i++){
+          const diff = prices[i] - prices[i-1];
+          if(diff > 0) signs.push(1);
+          else if(diff < 0) signs.push(-1);
+        }
+        const seq = signs.filter(s=>s!==0);
+        if(seq.length >= 4){
+          let alternating = true;
+          for(let i=1;i<seq.length;i++){
+            if(seq[i] === seq[i-1]){
+              alternating = false;
+              break;
+            }
+          }
+          if(alternating){
+            newTrend = 'SIDEWAYS';
+          }
+        }
+      }
+
+      if(newTrend === 'UP' && currentTrend !== 'UP'){
+        currentTrend = 'UP';
+      } else if(newTrend === 'DOWN' && currentTrend !== 'DOWN'){
+        currentTrend = 'DOWN';
+      } else if(newTrend === 'SIDEWAYS' && currentTrend !== 'SIDEWAYS'){
+        currentTrend = 'SIDEWAYS';
+      }
+    }
+
+    // === UP / DOWN mantığına göre RISE / FALL sinyali ===
+    function evaluateRiseFallSignal(){
+      // Barier kullanmıyoruz ama 20 tiklik destek/direnç kırılım yönünü kullanıyoruz
+      if(!lastBreakDir) return;
+      if(prices.length < 6) return;
+      if(zzRanges.length < 5) return;
+
+      const startIdx = prices.length - 6;  // son 6 tik içindeki vektörler
+
+      let upSteps   = [];
+      let downSteps = [];
+
+      for(let i=startIdx; i<prices.length-1; i++){
+        const p0  = prices[i];
+        const p1  = prices[i+1];
+        const vec = zzRanges[i] || 0;
+
+        if(p1 > p0)      upSteps.push(vec);
+        else if(p1 < p0) downSteps.push(vec);
+      }
+
+      // Direnç tarafı kırılmışsa (lastBreakDir='UP') → düşüşlerin gücüne bak
+      if(lastBreakDir === 'UP' && downSteps.length >= 2){
+        const lastDown = downSteps[downSteps.length-1];
+        const prevDown = downSteps[downSteps.length-2];
+
+        // Düşüş önceki bir/iki düşüşten daha düşük olabildiğinde → DOWN (FALL)
+        // Düşüş önceki düşüşlerden daha düşük olmayı başaramadığında → UP (RISE)
+        if(lastDown > prevDown){
+          // satıcı daha güçlü → DOWN mantığı → FALL
+          setSignal('FALL');
+        } else {
+          // satıcı gücü artamadı → UP mantığı → RISE
+          setSignal('RISE');
+        }
+      }
+
+      // Support tarafı kırılmışsa (lastBreakDir='DOWN') → yükselişlerin gücüne bak
+      if(lastBreakDir === 'DOWN' && upSteps.length >= 2){
+        const lastUp = upSteps[upSteps.length-1];
+        const prevUp = upSteps[upSteps.length-2];
+
+        // Yükseliş önceki yükselişlerden daha yüksek olabildiğinde → UP (RISE)
+        // Yükseliş daha yüksek olmayı başaramadığında → DOWN (FALL)
+        if(lastUp > prevUp){
+          setSignal('RISE');
+        } else {
+          setSignal('FALL');
+        }
+      }
+    }
+
+    // === Alt satır balonları ===
+    function renderCalcBubbles(){
+      ['rowNB','rowAB','rowAR','rowNR'].forEach(id=>{
+        const rowEl=document.getElementById(id);
+        rowEl.querySelectorAll('.calc-box, .calc-worm').forEach(e=>e.remove());
+      });
+
+      const topRow=document.getElementById('numbersTop');
+      const boxes=topRow.querySelectorAll('.num-box');
+      if(boxes.length<2) return;
+
+      const N = boxes.length - 1;
+      for(let i=0;i<N;i++){
+        let a=parseFloat(boxes[i].innerText.replace(',', '.'));
+        let b=parseFloat(boxes[i+1].innerText.replace(',', '.'));
+        let diff;
+
+        if(currentGraph==='Z.Z'){
+          diff = Math.abs(b-a).toFixed(1);
+        } else {
+          if(a>=6 && a<=9 && b===0) b=10;
+          if(a===0 && b>=6 && b<=9) a=10;
+          diff=Math.abs(b-a);
+        }
+
+        let c2=numColors.slice(-11)[i+1]||'red';
+        if(c2==='#666') c2=numColors.slice(-11)[i]||'red';
+        const isBlue=(c2==='blue');
+
+        let rowId;
+        if(currentGraph==='Z.Z'){  
+          rowId=isBlue?'rowNB':'rowNR';
+        } else {
+          rowId=(b<a)?(isBlue?'rowAB':'rowAR'):(isBlue?'rowNB':'rowNR');
+        }
+
+        const rowEl=document.getElementById(rowId);
+        const rPrev=boxes[i].getBoundingClientRect();
+        const rNext=boxes[i+1].getBoundingClientRect();
+        const rRow=rowEl.getBoundingClientRect();
+        const midX=(rPrev.right+rNext.left)/2;
+        const leftInside=midX-rRow.left-11;
+
+        const bubble=document.createElement('div');
+        bubble.className='calc-box';
+        bubble.style.left=leftInside+'px';
+        bubble.style.background=isBlue?'blue':'red';
+        bubble.textContent=diff;
+        rowEl.appendChild(bubble);
+
+        const wormColor=wormLinesTop.slice(-11)[i+1];
+        if(wormColor==='blue' || wormColor==='red'){
+          const worm=document.createElement('div');
+          worm.className='calc-worm';
+          worm.style.width=bubble.offsetWidth+'px';
+          worm.style.left=bubble.offsetLeft+'px';
+          worm.style.top=(bubble.offsetTop+bubble.offsetHeight+2)+'px';
+          worm.style.borderTopColor=wormColor;
+          rowEl.appendChild(worm);
+        }
+      }
+    }
+
+    function startWS(){
+      ws=new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
+      ws.onopen=()=>{
+        ws.send(JSON.stringify({ticks_history:currentPair,end:"latest",count:20,subscribe:1}));
+      };
+      ws.onmessage=(msg)=>{
+        const d=JSON.parse(msg.data);
+
+        if(d.history){
+          d.history.prices.forEach(p=>{
+            const price=parseFloat(p);
+            prices.push(price);
+            const lastTwo=Math.floor(price).toString().slice(-2);
+            digits.push(lastTwo);
+            const priceStr=price.toString();
+            const dec=(priceStr.split('.')[1]||'0');
+            decimalDigits.push(dec.slice(-1));
+            const lastInt=Math.floor(price).toString().slice(-1);
+            const firstDec=dec.charAt(0)||'0';
+            combinedDigits.push(lastInt+','+firstDec);
+            updateWorm();
+          });
+        }
+
+        if(d.tick){
+          const price=parseFloat(d.tick.quote);
+          prices.push(price); if(prices.length>20) prices.shift();
+
+          const lastTwo=Math.floor(price).toString().slice(-2);
+          digits.push(lastTwo); if(digits.length>20) digits.shift();
+
+          const priceStr=d.tick.quote.toString();
+          const dec=(priceStr.split('.')[1]||'0');
+          decimalDigits.push(dec.slice(-1)); if(decimalDigits.length>20) decimalDigits.shift();
+
+          const lastInt=Math.floor(price).toString().slice(-1);
+          const firstDec=dec.charAt(0)||'0';
+          combinedDigits.push(lastInt+','+firstDec); if(combinedDigits.length>20) combinedDigits.shift();
+
+          updateWorm();
+
+          const priceEl = document.getElementById('price');
+          priceEl.innerText = price.toFixed(2).replace('.', ',');
+          if(prices.length > 1){
+            const prev = prices[prices.length-2];
+            if(price > prev){
+              priceEl.style.background = 'blue';
+            } else if(price < prev){
+              priceEl.style.background = 'red';
+            } else {
+              priceEl.style.background = '#999';
+            }
+          }
+        }
+
+        // ZZ & Trend & RISE/FALL mantığı
+        updateZZRanges();
+        evaluateTrend();
+        evaluateRiseFallSignal();
+
+        // üst numaralar + grafik
+        const row=document.getElementById('numbersTop');
+        row.innerHTML='';
+        numColors=[];
+        let activeArr=(currentGraph==='XZ'?decimalDigits:(currentGraph==='ZZ'?digits:combinedDigits));
+        const sliceArr=activeArr.slice(-11);
+        for(let i=0;i<sliceArr.length;i++){
+          const globalIndex=activeArr.length-11+i;
+          const up=globalIndex>0&&prices[globalIndex]>prices[globalIndex-1];
+          const down=globalIndex>0&&prices[globalIndex]<prices[globalIndex-1];
+          const color=up?'blue':down?'red':'#666';
+          numColors.push(color);
+          const box=document.createElement('div');
+          box.className='num-box';
+          box.style.background=color;
+          box.innerText=(currentGraph==='Z.Z')?(sliceArr[i]||'').replace(',', '.'):(sliceArr[i]||'0');
+          row.appendChild(box);
+        }
+
+        const last11=prices.slice(-11);
+        chart.data.datasets[0].data=last11;
+        chart.data.datasets[0].pointBackgroundColor=last11.map((p,i)=>{
+          if(i===0) return 'gray';
+          if(p>last11[i-1]) return 'blue';
+          if(p<last11[i-1]) return 'red';
+          return 'gray';
+        });
+        chart.data.datasets[0].pointBorderColor=Array(last11.length).fill('transparent');
+        chart.data.labels=Array.from({length:last11.length},(_,i)=>(i+1).toString());
+        chart.update();
+
+        setTimeout(()=>{
+          renderWormLines('numbersTop',wormLinesTop.slice(-11));
+          renderCalcBubbles();
+          placeVerticalLine();
+        },40);
+      };
+    }
+
+    function updateTime(){
+      const now=new Date();
+      const hh=now.getUTCHours().toString().padStart(2,'0');
+      const mm=now.getUTCMinutes().toString().padStart(2,'0');
+      const ss=now.getUTCSeconds().toString().padStart(2,'0');
+      document.getElementById('time').innerText=`GMT ${hh}:${mm}:${ss}`;
+    }
+    setInterval(updateTime,1000);
+    updateTime();
+    startWS();
+  </script>
+
+  <!-- ============ GÜNCELLENMİŞ ADDON (soru işaretleri düzeltildi) ============ -->
+  <style>
+    #calcArea{position:relative;width:100%;max-width:420px;margin-top:10px;height:0}
+    #calcInner{position:absolute;left:0;right:0;top:0;bottom:0}
+    .calc-stem{position:absolute;width:1px;background:#000;opacity:1;pointer-events:none;z-index:0}
+    .calc-bubble{position:absolute;transform:translate(-50%,-50%);
+                 width:22px;height:22px;border-radius:4px;font-size:12px;font-weight:700;
+                 color:#fff;display:flex;align-items:center;justify-content:center;z-index:1}
+    .calc-worm{position:absolute;height:2px;border-top:2px solid;width:18px;z-index:1}
+    #calcSep{position:absolute;top:0;bottom:0;width:3px;background:#000;display:none;z-index:0}
+  </style>
+
+  <div id="calcArea"><div id="calcInner"></div><div id="calcSep"></div></div>
+
+  <script>
+  (function(){
+    function placeAreaAboveAnalysis(){
+      const area=document.getElementById('calcArea');
+      const analysis=document.getElementById('analysisBoxes');
+      if(area && analysis && area.nextElementSibling!==analysis){
+        analysis.parentNode.insertBefore(area, analysis);
+      }
+    }
+    function syncHeightToChart(){
+      const area=document.getElementById('calcArea');
+      const cvs=document.getElementById('chart');
+      if(!area||!cvs) return;
+      area.style.height = cvs.getBoundingClientRect().height + 'px';
+    }
+    function colorPick(cols,i){ let c=cols[i]||'#666'; if(c==='#666') c=cols[i-1]||'#666'; return c; }
+
+    function diffForIndex(mode, pricesSlice, digitsSlice, combinedSlice, i){
+      if(mode==='XZ'){
+        const zArr = pricesSlice.map(p => Math.floor(p)%10);
+        let a = zArr[i], b = zArr[i+1];
+        if(a>=6 && a<=9 && b===0) b = 10;
+        if(a===0 && b>=6 && b<=9) a = 10;
+        return Math.abs(b-a);
+      } else if(mode==='Z.Z'){
+        const a = parseFloat((combinedSlice[i]   || '0,0').replace(',','.'));
+        const b = parseFloat((combinedSlice[i+1] || '0,0').replace(',','.'));
+        return Math.abs(b-a).toFixed(1);
+      } else { // ZZ
+        const a = parseInt(digitsSlice[i]   || '0', 10);
+        const b = parseInt(digitsSlice[i+1] || '0', 10);
+        return Math.abs(b-a);
+      }
+    }
+
+    function scaleToAreaY(chartY, rCanvas, rArea){
+      if(!rCanvas.height) return 20;
+      const Hc=rCanvas.height, Ha=rArea.height;
+      const topPad=Math.round(Ha*0.20), usable=Ha-topPad-24-12;
+      const t=Math.min(Math.max(chartY/Hc,0),1);
+      return topPad + t*usable;
+    }
+
+    function renderCalc(){
+      const inner=document.getElementById('calcInner');
+      const sep  =document.getElementById('calcSep');
+      const cvs  =document.getElementById('chart');
+      if(!inner||!cvs||!window.chart) return;
+
+      placeAreaAboveAnalysis();
+      syncHeightToChart();
+
+      inner.innerHTML=''; sep.style.display='none';
+
+      const vis=Math.min(11, prices.length);
+      if(vis<2) return;
+
+      const cols = numColors.slice(-vis);
+      const worms= wormLinesTop.slice(-vis);
+
+      const meta=chart.getDatasetMeta(0);
+      const pts =meta.data.slice(-vis);
+
+      const rCanvas=cvs.getBoundingClientRect();
+      const rArea  =document.getElementById('calcArea').getBoundingClientRect();
+
+      const topRow=document.getElementById('numbersTop');
+      const boxes=[...topRow.querySelectorAll('.num-box')].slice(-vis);
+      const centers=boxes.map(b=>{ const r=b.getBoundingClientRect(); return (r.left+r.width/2)-rArea.left; });
+      const mids=[]; for(let i=0;i<centers.length-1;i++) mids.push((centers[i]+centers[i+1])/2);
+
+      const rNums=topRow.getBoundingClientRect();
+      const startFromWorm = (rNums.bottom - rArea.top) - 1;
+      const stemTop  = -Math.max(0, startFromWorm);
+      const stemGain =  Math.max(0, startFromWorm);
+
+      for(let i=0;i<vis-1;i++){
+        const x = mids[i];
+        const yChart = pts[i+1]?.y || 0;
+        const y2 = scaleToAreaY(yChart, rCanvas, rArea);
+        const stem=document.createElement('div');
+        stem.className='calc-stem';
+        stem.style.left=x+'px';
+        stem.style.top =stemTop+'px';
+        const h = Math.max(10, y2 - 14 + stemGain);
+        stem.style.height = h + 'px';
+        stem.style.background = colorPick(cols, i+1);
+        inner.appendChild(stem);
+      }
+
+      const pricesSlice = prices.slice(-vis);
+      const digitsSlice = digits.slice(-vis);
+      const combinedSlice = combinedDigits.slice(-vis);
+
+      if(window.currentGraph === 'XZ'){
+        const zArr = pricesSlice.map(p => Math.floor(p)%10);
+        for(let i=0;i<vis-1;i++){
+          const x = mids[i];
+          const yChart = pts[i+1]?.y || 0;
+          const y = scaleToAreaY(yChart, rCanvas, rArea);
+          const diff = diffForIndex('XZ', pricesSlice, digitsSlice, combinedSlice, i);
+
+          const c2 = (numColors.slice(-vis)[i+1] || '#666');
+          let aZ = zArr[i], bZ = zArr[i+1];
+          if(aZ>=6 && aZ<=9 && bZ===0) bZ=10;
+          if(aZ===0 && bZ>=6 && bZ<=9) aZ=10;
+          const isAbn = bZ < aZ;
+          const isBlue = c2 === 'blue';
+
+          const fill = (isBlue ? (isAbn ? '#86b7ff' : 'blue') : (isAbn ? '#ff6b6b' : 'red'));
+
+          const bub=document.createElement('div');
+          bub.className='calc-bubble';
+          bub.style.left = x + 'px';
+          bub.style.top  = y + 'px';
+          bub.style.background = fill;
+          bub.textContent = String(diff);
+          inner.appendChild(bub);
+
+          const w = worms[i+1];
+          if(w==='blue' || w==='red'){
+            const ww=document.createElement('div');
+            ww.className='calc-worm';
+            ww.style.left = (x - 9) + 'px';
+            ww.style.top  = (y + 14) + 'px';
+            ww.style.borderTopColor = w;
+            inner.appendChild(ww);
+          }
+        }
+      } else {
+        const mode = (window.currentGraph==='Z.Z') ? 'Z.Z' : 'ZZ';
+        for(let i=0;i<vis-1;i++){
+          const x = mids[i];
+          const yChart = pts[i+1]?.y || 0;
+          const y = scaleToAreaY(yChart, rCanvas, rArea);
+          const diff = diffForIndex(mode, pricesSlice, digitsSlice, combinedSlice, i);
+
+          const c2 = (numColors.slice(-vis)[i+1] || '#666');
+          const isBlue = c2 === 'blue';
+          const fill = isBlue ? 'blue' : 'red';
+
+          const bub=document.createElement('div');
+          bub.className='calc-bubble';
+          bub.style.left = x + 'px';
+          bub.style.top  = y + 'px';
+          bub.style.background = fill;
+          bub.textContent = String(diff);
+          inner.appendChild(bub);
+
+          const w = worms[i+1];
+          if(w==='blue' || w==='red'){
+            const ww=document.createElement('div');
+            ww.className='calc-worm';
+            ww.style.left = (x - 9) + 'px';
+            ww.style.top  = (y + 14) + 'px';
+            ww.style.borderTopColor = w;
+            inner.appendChild(ww);
+          }
+        }
+      }
+
+      if(mids.length>=6){
+        const sepX = (mids[3] + mids[4]) / 2;
+        sep.style.display='block';
+        sep.style.left = sepX + 'px';
+        sep.style.top  = stemTop + 'px';
+      }
+    }
+
+    const _renderCalcBubbles = window.renderCalcBubbles;
+    window.renderCalcBubbles = function(){
+      if(typeof _renderCalcBubbles === 'function') _renderCalcBubbles();
+      setTimeout(renderCalc, 40);
+    };
+
+    const _startWS = window.startWS;
+    window.startWS = function(){
+      if(typeof _startWS === 'function') _startWS();
+      setTimeout(renderCalc,500);
+    };
+
+    window.addEventListener('resize', ()=> setTimeout(renderCalc,100));
+    document.addEventListener('DOMContentLoaded', ()=>{ placeAreaAboveAnalysis(); syncHeightToChart(); setTimeout(renderCalc,200); });
+  })();
+  </script>
+  <!-- ===================== /GÜNCELLENMİŞ ADDON ===================== -->
+
+  <!-- ===== MIRROR BOX ADDON (0,0 hariç) ===== -->
+  <style>
+    .mirror-box{
+      position:absolute; border:3px solid #000; border-radius:2px;
+      pointer-events:none; z-index:5;
+    }
+  </style>
+  <script>
+  (function(){
+    function rgbToLabel(rgb){
+      const m = rgb.match(/\d+/g); if(!m) return 'other';
+      const [r,g,b] = m.map(Number);
+      if(r > b && r > g) return 'red';
+      if(b > r && b > g) return 'blue';
+      return 'other';
+    }
+    function getBubbles(){
+      const area  = document.getElementById('calcArea');
+      const inner = document.getElementById('calcInner');
+      if(!area || !inner) return [];
+      const rArea = area.getBoundingClientRect();
+      return [...inner.querySelectorAll('.calc-bubble')].map(el=>{
+        const r = el.getBoundingClientRect();
+        return {
+          el,
+          x  : r.left - rArea.left + r.width/2,
+          y  : r.top  - rArea.top  + r.height/2,
+          val: el.textContent.trim(),
+          col: rgbToLabel(getComputedStyle(el).backgroundColor)
+        };
+      }).sort((a,b)=> (a.x-b.x) || (a.y-b.y));
+    }
+    function clearOld(){ document.querySelectorAll('#calcInner .mirror-box').forEach(e=>e.remove()); }
+    function boxAroundPair(p,q){
+      const inner = document.getElementById('calcInner');
+      const left   = Math.min(p.x,q.x) - 11;
+      const top    = Math.min(p.y,q.y) - 16;
+      const width  = Math.abs(q.x-p.x) + 22;
+      const height = Math.abs(q.y-p.y) + 30;
+      const box = document.createElement('div');
+      box.className = 'mirror-box';
+      box.style.left = left+'px';
+      box.style.top  = top+'px';
+      box.style.width= width+'px';
+      box.style.height=height+'px';
+      inner.appendChild(box);
+    }
+
+    function drawMirrorBoxes(inner, bubbles){
+      if(bubbles.length < 4) return;
+      for(let i=0; i<bubbles.length-1; i++){
+        const a=bubbles[i], b=bubbles[i+1];
+        if(a.col!==b.col || (a.col!=='red' && a.col!=='blue')) continue;
+        if(a.val===b.val) continue;
+
+        for(let j=i+2; j<bubbles.length-1; j++){
+          const c=bubbles[j], d=bubbles[j+1];
+          if(c.col!==a.col || d.col!==a.col) continue;
+          if(c.val===d.val) continue;
+
+          if(a.val===d.val && b.val===c.val){
+            boxAroundPair(a,b);
+            boxAroundPair(c,d);
+          }
+        }
+      }
+    }
+
+    function scan(){
+      const B = getBubbles();
+      clearOld();
+      drawMirrorBoxes(document.getElementById('calcInner'), B);
+    }
+
+    const prev = window.renderCalcBubbles;
+    window.renderCalcBubbles = function(){
+      if(typeof prev === 'function') prev();
+      setTimeout(scan, 60);
+    };
+    window.addEventListener('resize', ()=> setTimeout(scan,100));
+  })();
+  </script>
+  <!-- ===== /MIRROR BOX ADDON ===== -->
+
+  <!-- ===== TREND DIRECTION BOX ADDON (0-0 ikililerini hariç tutar) ===== -->
+  <style>
+    .trend3-box{
+      position:absolute;
+      border:3px solid;
+      border-radius:4px;
+      pointer-events:none;
+      z-index:12;
+      box-sizing:border-box;
+    }
+  </style>
+  <script>
+  (function(){
+    const PAD_X = 6, PAD_Y = 14;
+
+    function colorLabel(rgb){
+      const m = rgb && rgb.match(/\d+/g);
+      if(!m) return 'other';
+      const [r,g,b] = m.map(Number);
+      if(b > r && b > g) return 'blue';
+      if(r > b && r > g) return 'red';
+      return 'other';
+    }
+    function readVal(el){
+      const t = (el.textContent||'').trim().replace(',', '.');
+      const v = parseFloat(t);
+      return Number.isFinite(v) ? v : 0;
+    }
+
+    function drawTrendBoxes(){
+      const area  = document.getElementById('calcArea');
+      const inner = document.getElementById('calcInner');
+      if(!area || !inner) return;
+
+      inner.querySelectorAll('.trend3-box').forEach(e=>e.remove());
+
+      const rA = area.getBoundingClientRect();
+
+      const bubbles = Array.from(inner.querySelectorAll('.calc-bubble')).map(el=>{
+        const r = el.getBoundingClientRect();
+        return {
+          el,
+          rect:r,
+          cx: r.left - rA.left + r.width/2,
+          left : r.left  - rA.left,
+          right: r.right - rA.left,
+          top  : r.top   - rA.top,
+          bot  : r.bottom- rA.top,
+          col  : colorLabel(getComputedStyle(el).backgroundColor),
+          val  : readVal(el)
+        };
+      }).sort((a,b)=>a.cx - b.cx);
+
+      if(bubbles.length < 3) return;
+
+      for(let i=0;i<=bubbles.length-3;i++){
+        const A=bubbles[i], B=bubbles[i+1], C=bubbles[i+2];
+
+        let type=null;
+        if(A.col==='red'  && B.col==='blue' && C.col==='blue') type='RBB';
+        else if(A.col==='blue' && B.col==='red'  && C.col==='red') type='BRR';
+        else continue;
+
+        if(B.val===0 && C.val===0) continue;
+
+        const isUp = C.val > B.val;
+
+        const borderColor = (type==='RBB')
+          ? (isUp ? 'blue' : 'red')
+          : (isUp ? 'red'  : 'blue');
+
+        const left   = Math.min(A.left, B.left, C.left) - PAD_X;
+        const right  = Math.max(A.right, B.right, C.right) + PAD_X;
+        const top    = Math.min(A.top, B.top, C.top) - PAD_Y;
+        const bottom = Math.max(A.bot, B.bot, C.bot) + PAD_Y;
+
+        const box = document.createElement('div');
+        box.className = 'trend3-box';
+        box.style.left   = left+'px';
+        box.style.top    = top+'px';
+        box.style.width  = (right-left)+'px';
+        box.style.height = (bottom-top)+'px';
+        box.style.borderColor=borderColor;
+
+        inner.appendChild(box);
+      }
+    }
+
+    const inner = document.getElementById('calcInner');
+    if(inner){
+      const mo = new MutationObserver(()=> requestAnimationFrame(()=> setTimeout(drawTrendBoxes, 50)));
+      mo.observe(inner, { childList:true, subtree:true });
+    }
+    window.addEventListener('resize', ()=> setTimeout(drawTrendBoxes,120));
+    setTimeout(drawTrendBoxes,400);
+  })();
+  </script>
+  <!-- ===== /TREND DIRECTION BOX ADDON ===== -->
+</body>
+</html>
